@@ -12,8 +12,5 @@ Approximately 1,800 models were explored for the job run that selected the param
 
 ![GitHub Logo](tableau1.png)
 
-Zoomed in a bit to the prediction period:
 
-![GitHub Logo](tableau2.png)
-
-The crypto Bitcoin data (not supplied) is proprietary to Finditly, LLC.
+**The crypto Bitcoin data (not supplied) is proprietary to Finditly, LLC.**
