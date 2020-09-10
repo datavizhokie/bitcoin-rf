@@ -11,11 +11,9 @@ Used GoogleNews Python library to pull in Top 30 'bitcoin' stories per day from 
 Approximately 1,800 models were explored for the job run that selected the parameters included in this repo. Below are modeling results. 
 
 ![GitHub Logo](tableau1.png)
-Format: ![Alt Text](url)
 
 Zoomed in a bit to the prediction period:
 
 ![GitHub Logo](tableau2.png)
-Format: ![Alt Text](url)
 
 The crypto Bitcoin data (not supplied) is proprietary to Finditly, LLC.
