@@ -17,7 +17,8 @@ source_data      = "data/Bitcoin Prices with GoogleNews Avg Sentiment for '01-01
 
 
 # Spliting into training and test data
-def split_data(test_perc, date_series):
+def split_data(test_perc, date_series, X, y, z):
+    ''' For model training, create training and holdout data sets '''
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = test_perc, shuffle=False)
     X_train_date, X_test_date = train_test_split(date_series, test_size = test_perc, shuffle=False)
@@ -35,6 +36,8 @@ def split_data(test_perc, date_series):
 
 
 def hp_grid():
+    ''' Set up hyperparameter grid '''
+
     #TODO: possibly make fancier
     # Number of trees in random forest
     n_estimators = [int(x) for x in np.linspace(start = 100, stop = 1600, num = 12)]
@@ -63,8 +66,11 @@ def hp_grid():
     return random_grid
 
 
-def classifier_instance_iter(random_grid, n_iter, crossfolds, state):
+def classifier_instance_iter(random_grid, n_iter, crossfolds, state, X, y, X_train, X_test, y_train, y_test):
 
+    ''' Set up model and classifier (clf) to run iterative models based on grid
+        Choose model with best performance (lowest MAE), and fit those params
+    '''
     # create random forest classifier model
     rf_model = RandomForestRegressor()
 
@@ -107,54 +113,58 @@ def classifier_instance_iter(random_grid, n_iter, crossfolds, state):
     return train_preds, test_preds, y_train, y_test, scores
 
 
-#DOstuff
-# importing feature data
-data = pd.read_csv(source_data, skiprows=0, parse_dates=['date'])
-date_series = data['date']
+def main():
+    # importing feature data
+    data = pd.read_csv(source_data, skiprows=0, parse_dates=['date'])
+    date_series = data['date']
 
-# integer-encode Signal
-conditions = [
-    (data['signal'] == 'sell'),
-    (data['signal'] == 'buy'),
-    (data['signal'].isnull())]
-choices = [0, 1, 2]
-data['signal_int'] = np.select(conditions, choices)
+    # integer-encode Signal
+    conditions = [
+        (data['signal'] == 'sell'),
+        (data['signal'] == 'buy'),
+        (data['signal'].isnull())]
+    choices = [0, 1, 2]
+    data['signal_int'] = np.select(conditions, choices)
 
-# drop lead columns that aren't necessary for features
-data = data.drop(['market_price_usd_lead_1',
-                'mining_difficulty_lead_1',
-                'hash_rate_lead_1',
-                'blockchain_txns_lead_1',
-                'unique_addresses_lead_1',
-                'buy',
-                'sell',
-                'signal'], axis=1)
+    # drop lead columns that aren't necessary for features
+    data = data.drop(['market_price_usd_lead_1',
+                    'mining_difficulty_lead_1',
+                    'hash_rate_lead_1',
+                    'blockchain_txns_lead_1',
+                    'unique_addresses_lead_1',
+                    'buy',
+                    'sell',
+                    'signal'], axis=1)
 
-# date field -> int64 format
-data['date'] = pd.to_datetime(data['date'])
-data['date'] = data['date'].map(dt.datetime.toordinal)
+    # date field -> int64 format
+    data['date'] = pd.to_datetime(data['date'])
+    data['date'] = data['date'].map(dt.datetime.toordinal)
 
-# setup X and y for modeling
-X = data.drop('diff_market_price_percent',axis=1)
-y = data['diff_market_price_percent']
-z = data['market_price_usd']
-print("Response (diff_market_price_percent) metrics:")
-print(f'Mean: {y.mean()}; Min: {y.min()}; Max: {y.max()}')
+    # setup X and y for modeling
+    X = data.drop('diff_market_price_percent',axis=1)
+    y = data['diff_market_price_percent']
+    z = data['market_price_usd']
+    print("Response (diff_market_price_percent) metrics:")
+    print(f'Mean: {y.mean()}; Min: {y.min()}; Max: {y.max()}')
 
-X_train, X_test, y_train, y_test, X_train_date, X_test_date, train_price, test_price, pred_min, pred_max = split_data(0.3, date_series)
-random_grid = hp_grid()
+    X_train, X_test, y_train, y_test, X_train_date, X_test_date, train_price, test_price, pred_min, pred_max = split_data(0.3, date_series, X, y, z)
+    random_grid = hp_grid()
 
-#### Control scaling of training iterations here!
-train_preds, test_preds, y_train, y_test, scores = classifier_instance_iter(random_grid, 600, 3, 1) 
+    #### Control scaling of training iterations here!
+    train_preds, test_preds, y_train, y_test, scores = classifier_instance_iter(random_grid, 600, 3, 1, X, y, X_train, X_test, y_train, y_test) 
 
-# join date series with prediction results, actuals, and prices
-test_preds_df = pd.DataFrame(test_preds, columns=['y_pred'])
-y_test_df = pd.DataFrame(y_test, columns=['diff_market_price_percent']).reset_index(drop=True)
-X_test_date_df = pd.DataFrame(X_test_date).reset_index(drop=True)
-test_price_df = pd.DataFrame(test_price).reset_index(drop=True)
+    # join date series with prediction results, actuals, and prices
+    test_preds_df = pd.DataFrame(test_preds, columns=['y_pred'])
+    y_test_df = pd.DataFrame(y_test, columns=['diff_market_price_percent']).reset_index(drop=True)
+    X_test_date_df = pd.DataFrame(X_test_date).reset_index(drop=True)
+    test_price_df = pd.DataFrame(test_price).reset_index(drop=True)
 
-test_preds_actuals= X_test_date_df.join(test_preds_df).join(y_test_df).join(test_price_df)
+    test_preds_actuals= X_test_date_df.join(test_preds_df).join(y_test_df).join(test_price_df)
 
-# write prediction results
-file_name = "Bitcoin %Diff Actuals, %Diff Pred, and Prices for '{}'-'{}'_unix_ts={}'".format(pred_min, pred_max, unix_timestamp)
-test_preds_actuals.to_csv('data/'+file_name +'.csv', index=False)
+    # write prediction results
+    file_name = f"Bitcoin %Diff Actuals, %Diff Pred, and Prices for '{pred_min}'-'{pred_max}'_unix_ts={unix_timestamp}'"
+    test_preds_actuals.to_csv('data/'+file_name +'.csv', index=False)
+
+
+if __name__== "__main__" :
+    main()
