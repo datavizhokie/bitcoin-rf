@@ -12,5 +12,8 @@ Approximately 1,800 models were explored for the job run that selected the param
 
 ![GitHub Logo](tableau1.png)
 
+Caveats:
+
+* News Sentiment is obviously not attainable for future days, thus take this validation predictions with caution
 
 **The crypto Bitcoin data (not supplied) is proprietary to Finditly, LLC.**
