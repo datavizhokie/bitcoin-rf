@@ -9,7 +9,7 @@ from sklearn.model_selection import RandomizedSearchCV
 from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import ParameterGrid
-
+import sys
 
 unix_timestamp  = datetime.utcnow().timestamp()
 date_format     = '%Y-%m-%d'
@@ -35,18 +35,17 @@ def split_data(test_perc, date_series, X, y, z):
     return X_train, X_test, y_train, y_test, X_train_date, X_test_date, train_price, test_price, pred_min, pred_max
 
 
-def hp_grid():
+def hp_grid(n_estimator_option_num, max_depth_option_num):
     ''' Set up hyperparameter grid '''
 
-    #TODO: possibly make fancier
     # Number of trees in random forest
-    n_estimators = [int(x) for x in np.linspace(start = 100, stop = 1600, num = 12)]
+    n_estimators = [int(x) for x in np.linspace(start = 100, stop = 1600, num = n_estimator_option_num)]
 
     # Number of features to consider at every split
     max_features = ['auto', 'sqrt']
 
     # Maximum number of levels in tree
-    max_depth = [int(x) for x in np.linspace(5, 30, num = 8)]
+    max_depth = [int(x) for x in np.linspace(5, 30, num = max_depth_option_num)]
 
     # Minimum number of samples required to split a node
     min_samples_split = [2, 5, 10, 15, 20, 50, 100]
@@ -148,10 +147,11 @@ def main():
     print(f'Mean: {y.mean()}; Min: {y.min()}; Max: {y.max()}')
 
     X_train, X_test, y_train, y_test, X_train_date, X_test_date, train_price, test_price, pred_min, pred_max = split_data(0.3, date_series, X, y, z)
-    random_grid = hp_grid()
+    
+    random_grid = hp_grid(12, 8)
 
     #### Control scaling of training iterations here!
-    train_preds, test_preds, y_train, y_test, scores = classifier_instance_iter(random_grid, 600, 3, 1, X, y, X_train, X_test, y_train, y_test) 
+    train_preds, test_preds, y_train, y_test, scores = classifier_instance_iter(random_grid, 5, 3, 1, X, y, X_train, X_test, y_train, y_test) 
 
     # join date series with prediction results, actuals, and prices
     test_preds_df = pd.DataFrame(test_preds, columns=['y_pred'])
